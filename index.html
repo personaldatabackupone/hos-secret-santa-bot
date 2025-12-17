@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Santa Bot 🎅</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border-top: 10px solid #d42426; /* Santa Red */
+        }
+        h1 { color: #d42426; margin-bottom: 1.5rem; }
+        .input-group { margin-bottom: 1rem; text-align: left; }
+        label { display: block; margin-bottom: 0.5rem; color: #333; font-weight: bold; }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box; /* Fixes padding issues */
+        }
+        button {
+            background-color: #d42426;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            width: 100%;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #b01b1d; }
+        .status { margin-top: 1rem; font-size: 0.9rem; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎅 Secret Santa Bot</h1>
+    <form id="santaForm">
+        <div class="input-group">
+            <label>Target Email</label>
+            <input type="email" id="email" placeholder="recipient@example.com" required>
+        </div>
+        <div class="input-group">
+            <label>The Secret Task</label>
+            <textarea id="task" rows="4" placeholder="e.g. Sing a Christmas song..." required></textarea>
+        </div>
+        <button type="submit" id="submitBtn">Send Anonymously</button>
+    </form>
+    <div id="status" class="status"></div>
+</div>
+
+<script>
+    document.getElementById('santaForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('submitBtn');
+        const statusDiv = document.getElementById('status');
+        const email = document.getElementById('email').value;
+        const task = document.getElementById('task').value;
+
+        btn.disabled = true;
+        btn.innerText = "Sending...";
+        statusDiv.innerText = "";
+
+        try {
+            const response = await fetch('/api/index', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, task })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                statusDiv.innerText = "✅ Message sent successfully!";
+                statusDiv.className = "status success";
+                document.getElementById('santaForm').reset();
+            } else {
+                throw new Error(result.error || "Failed to send");
+            }
+        } catch (error) {
+            statusDiv.innerText = "❌ Error: " + error.message;
+            statusDiv.className = "status error";
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Send Anonymously";
+        }
+    });
+</script>
+
+</body>
+</html>
