@@ -1,17 +1,19 @@
 from flask import Flask, request, jsonify, send_file
-import smtplib
-import ssl
-from email.message import EmailMessage
+import requests
+import json
+from dotenv import load_dotenv
 
 # Initialize Flask
-# static_folder='.' tells Flask that index.html is in the current directory
 app = Flask(__name__, static_folder='.')
 
-# --- CONFIGURATION (FILL THESE IN FOR LOCAL TESTING) ---
-# Since we are running locally, we can't use Vercel environment variables.
-# Put your credentials directly here for testing.
-SENDER_EMAIL = "hos.secretsanta.2025@gmail.com"
-APP_PASSWORD = "nhympayuazvnzuih" 
+# --- CONFIGURATION (BREVO) ---
+# 1. Go to Brevo.com -> Settings -> SMTP & API -> Generate API Key
+# 2. Paste the key below (starts with xkeysib-...)
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+
+# You can set this to anything you want!
+SENDER_NAME = "🎅 Secret Santa Bot"
+SENDER_EMAIL = "santa@highonswift.com" 
 
 # 1. Route to serve the HTML Page (Frontend)
 @app.route('/')
@@ -28,35 +30,58 @@ def send_mail():
     if not recipient_email or not task_message:
         return jsonify({"error": "Missing email or task"}), 400
 
-    subject = "🎅 Secret Santa Mission Assignment"
+    # --- BREVO API LOGIC ---
+    url = "https://api.brevo.com/v3/smtp/email"
     
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = SENDER_EMAIL
-    msg['To'] = recipient_email
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+    }
     
-    body = f"""
-    Ho Ho Ho!
-    
-    You have been assigned a Secret Santa task.
-    
-    YOUR MISSION:
-    {task_message}
-    
-    Good luck!
-    - The Secret Santa Bot
+    # HTML Email Body
+    html_content = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif;">
+            <h2 style="color: #d42426;">Ho Ho Ho! 🎅</h2>
+            <p>You have been assigned a Secret Santa task.</p>
+            <div style="background-color: #f9f9f9; padding: 15px; border-left: 5px solid #d42426; margin: 20px 0;">
+                <strong>YOUR MISSION:</strong><br>
+                {task_message}
+            </div>
+            <p>Good luck!</p>
+            <p><em>- The Secret Santa Bot</em></p>
+        </body>
+    </html>
     """
-    msg.set_content(body)
 
-    context = ssl.create_default_context()
-    
+    payload = {
+        "sender": {
+            "name": SENDER_NAME,
+            "email": SENDER_EMAIL
+        },
+        "to": [
+            {
+                "email": recipient_email
+            }
+        ],
+        "subject": "🎅 Secret Santa Mission Assignment",
+        "htmlContent": html_content
+    }
+
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-            server.login(SENDER_EMAIL, APP_PASSWORD)
-            server.send_message(msg)
-        return jsonify({"message": "Sent successfully"}), 200
+        # Send POST request to Brevo
+        response = requests.post(url, headers=headers, data=json.dumps(payload))
+        
+        # Status 201 means "Created" (Email Sent Successfully)
+        if response.status_code == 201:
+            return jsonify({"message": "Sent successfully"}), 200
+        else:
+            print(f"❌ Brevo Error: {response.text}")
+            return jsonify({"error": "Failed to send email via Brevo"}), 500
+            
     except Exception as e:
-        print(f"Error: {e}") # Print error to terminal so you can see it
+        print(f"❌ Connection Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
