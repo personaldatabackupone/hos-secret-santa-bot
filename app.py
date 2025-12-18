@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_file
 import requests
 import json
 from dotenv import load_dotenv
+import os
 
 # Initialize Flask
 app = Flask(__name__, static_folder='.')
@@ -88,3 +89,4 @@ if __name__ == '__main__':
     print("🎅 Secret Santa App is running!")
     print("👉 Go to: http://127.0.0.1:5000")
     app.run(debug=True, port=5000)
+
